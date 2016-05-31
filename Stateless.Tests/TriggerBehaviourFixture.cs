@@ -13,7 +13,7 @@ namespace Stateless.Tests
         public void ExposesCorrectUnderlyingTrigger()
         {
             var transtioning = new StateMachine<State, Trigger>.TransitioningTriggerBehaviour(
-                Trigger.X, State.C, () => true);
+                Trigger.X, State.C, (a, t) => true);
 
             Assert.AreEqual(Trigger.X, transtioning.Trigger);
         }
@@ -22,18 +22,18 @@ namespace Stateless.Tests
         public void WhenGuardConditionFalse_IsGuardConditionMetIsFalse()
         {
             var transtioning = new StateMachine<State, Trigger>.TransitioningTriggerBehaviour(
-                Trigger.X, State.C, () => false);
+                Trigger.X, State.C, (a, t) => false);
 
-            Assert.IsFalse(transtioning.IsGuardConditionMet);
+            Assert.IsFalse(transtioning.IsGuardConditionMet(Trigger.X));
         }
 
         [Test]
         public void WhenGuardConditionTrue_IsGuardConditionMetIsTrue()
         {
             var transtioning = new StateMachine<State, Trigger>.TransitioningTriggerBehaviour(
-                Trigger.X, State.C, () => true);
+                Trigger.X, State.C, (a, t) => true);
 
-            Assert.IsTrue(transtioning.IsGuardConditionMet);
+            Assert.IsTrue(transtioning.IsGuardConditionMet(Trigger.X));
         }
     }
 }

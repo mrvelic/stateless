@@ -12,7 +12,7 @@ namespace Stateless.Tests
         [Test]
         public void StateRemainsUnchanged()
         {
-            var ignored = new StateMachine<State, Trigger>.IgnoredTriggerBehaviour(Trigger.X, () => true);
+            var ignored = new StateMachine<State, Trigger>.IgnoredTriggerBehaviour(Trigger.X, (a, t) => true);
             State destination = State.A;
             Assert.IsFalse(ignored.ResultsInTransitionFrom(State.B, new object[0], out destination));
         }
@@ -21,7 +21,7 @@ namespace Stateless.Tests
         public void ExposesCorrectUnderlyingTrigger()
         {
             var ignored = new StateMachine<State, Trigger>.IgnoredTriggerBehaviour(
-                Trigger.X, () => true);
+                Trigger.X, (a, t) => true);
 
             Assert.AreEqual(Trigger.X, ignored.Trigger);
         }
@@ -30,18 +30,18 @@ namespace Stateless.Tests
         public void WhenGuardConditionFalse_IsGuardConditionMetIsFalse()
         {
             var ignored = new StateMachine<State, Trigger>.IgnoredTriggerBehaviour(
-                Trigger.X, () => false);
+                Trigger.X, (a, t) => false);
 
-            Assert.IsFalse(ignored.IsGuardConditionMet);
+            Assert.IsFalse(ignored.IsGuardConditionMet(Trigger.X));
         }
 
         [Test]
         public void WhenGuardConditionTrue_IsGuardConditionMetIsTrue()
         {
             var ignored = new StateMachine<State, Trigger>.IgnoredTriggerBehaviour(
-                Trigger.X, () => true);
+                Trigger.X, (a, t) => true);
 
-            Assert.IsTrue(ignored.IsGuardConditionMet);
+            Assert.IsTrue(ignored.IsGuardConditionMet(Trigger.X));
         }
     }
 }

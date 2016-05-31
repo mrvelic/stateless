@@ -30,16 +30,16 @@ namespace Stateless
                 _state = state;
             }
 
-            public bool CanHandle(TTrigger trigger)
+            public bool CanHandle(TTrigger trigger, params object[] args)
             {
                 TriggerBehaviour unused;
-                return TryFindHandler(trigger, out unused);
+                return TryFindHandler(trigger, args, out unused);
             }
 
-            public bool TryFindHandler(TTrigger trigger, out TriggerBehaviour handler)
+            public bool TryFindHandler(TTrigger trigger, object[] args, out TriggerBehaviour handler)
             {
-                return (TryFindLocalHandler(trigger, out handler, t => t.IsGuardConditionMet) ||
-                    (Superstate != null && Superstate.TryFindHandler(trigger, out handler)));
+                return (TryFindLocalHandler(trigger, out handler, t => t.IsGuardConditionMet(trigger, args)) ||
+                    (Superstate != null && Superstate.TryFindHandler(trigger, args, out handler)));
             }
             
             bool TryFindLocalHandler(TTrigger trigger, out TriggerBehaviour handler, params Func<TriggerBehaviour, bool>[] filters)
@@ -62,10 +62,10 @@ namespace Stateless
                 return handler != null;
             }
 
-            public bool TryFindHandlerWithUnmetGuardCondition(TTrigger trigger, out TriggerBehaviour handler)
+            public bool TryFindHandlerWithUnmetGuardCondition(TTrigger trigger, object[] args, out TriggerBehaviour handler)
             {
-                return (TryFindLocalHandler(trigger, out handler, t => !t.IsGuardConditionMet) || 
-                    (Superstate != null && Superstate.TryFindHandlerWithUnmetGuardCondition(trigger, out handler)));
+                return (TryFindLocalHandler(trigger, out handler, t => !t.IsGuardConditionMet(trigger, args)) || 
+                    (Superstate != null && Superstate.TryFindHandlerWithUnmetGuardCondition(trigger, args, out handler)));
             }
 
             public void AddEntryAction(TTrigger trigger, Action<Transition, object[]> action, string entryActionDescription)
@@ -193,19 +193,16 @@ namespace Stateless
                     (_superstate != null && _superstate.IsIncludedIn(state));
             }
 
-            public IEnumerable<TTrigger> PermittedTriggers
+            public IEnumerable<TTrigger> GetPermittedTriggers(params object[] args)
             {
-                get
-                {
-                    var result = _triggerBehaviours
-                        .Where(t => t.Value.Any(a => a.IsGuardConditionMet))
-                        .Select(t => t.Key);
+                var result = _triggerBehaviours
+                    .Where(t => t.Value.Any(a => a.IsGuardConditionMet(t.Key, args)))
+                    .Select(t => t.Key);
 
-                    if (Superstate != null)
-                        result = result.Union(Superstate.PermittedTriggers);
+                if (Superstate != null)
+                    result = result.Union(Superstate.GetPermittedTriggers(args));
 
-                    return result.ToArray();
-                }
+                return result.ToArray();
             }
         }
     }
