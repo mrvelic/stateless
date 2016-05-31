@@ -10,10 +10,10 @@ namespace Stateless
         internal abstract class TriggerBehaviour
         {
             readonly TTrigger _trigger;
-            readonly Func<bool> _guard;
+            readonly Func<object[], TTrigger, bool> _guard;
             readonly string _guardDescription;
 
-            protected TriggerBehaviour(TTrigger trigger, Func<bool> guard, string guardDescription)
+            protected TriggerBehaviour(TTrigger trigger, Func<object[], TTrigger, bool> guard, string guardDescription)
             {
                 _trigger = trigger;
                 _guard = guard;
@@ -21,15 +21,12 @@ namespace Stateless
             }
 
             public TTrigger Trigger { get { return _trigger; } }
-            internal Func<bool> Guard { get { return _guard; } }
+            internal Func<object[], TTrigger, bool> Guard { get { return _guard; } }
             internal string GuardDescription{ get { return _guardDescription ; } }
 
-            public bool IsGuardConditionMet
+            public virtual bool IsGuardConditionMet(TTrigger trigger, params object[] args)
             {
-                get
-                {
-                    return _guard();
-                }
+                return _guard(args, trigger);
             }
 
             public abstract bool ResultsInTransitionFrom(TState source, object[] args, out TState destination);

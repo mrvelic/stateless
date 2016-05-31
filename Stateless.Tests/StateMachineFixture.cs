@@ -106,7 +106,7 @@ namespace Stateless.Tests
             sm.Configure(State.C)
                 .Permit(Trigger.Y, State.A);
 
-            var permitted = sm.PermittedTriggers;
+            var permitted = sm.GetPermittedTriggers();
 
             Assert.IsTrue(permitted.Contains(Trigger.X));
             Assert.IsTrue(permitted.Contains(Trigger.Y));
@@ -125,7 +125,7 @@ namespace Stateless.Tests
             sm.Configure(State.C)
                 .Permit(Trigger.X, State.B);
 
-            var permitted = sm.PermittedTriggers;
+            var permitted = sm.GetPermittedTriggers();
             Assert.AreEqual(1, permitted.Count());
             Assert.AreEqual(Trigger.X, permitted.First());
         }
@@ -136,9 +136,9 @@ namespace Stateless.Tests
             var sm = new StateMachine<State, Trigger>(State.B);
 
             sm.Configure(State.B)
-                .PermitIf(Trigger.X, State.A, () => false);
+                .PermitIf(Trigger.X, State.A, (a, t) => false);
 
-            Assert.AreEqual(0, sm.PermittedTriggers.Count());
+            Assert.AreEqual(0, sm.GetPermittedTriggers().Count());
         }
 
         [Test]
@@ -147,8 +147,8 @@ namespace Stateless.Tests
             var sm = new StateMachine<State, Trigger>(State.B);
 
             sm.Configure(State.B)
-                .PermitIf(Trigger.X, State.A, () => false)
-                .PermitIf(Trigger.X, State.C, () => true);
+                .PermitIf(Trigger.X, State.A, (a, t) => false)
+                .PermitIf(Trigger.X, State.C, (a, t) => true);
 
             sm.Fire(Trigger.X);
 
@@ -224,7 +224,7 @@ namespace Stateless.Tests
             const string guardDescription = "test";
 
             var sm = new StateMachine<State, Trigger>(State.A);
-            sm.Configure(State.A).PermitIf(Trigger.X, State.B, () => false, guardDescription); 
+            sm.Configure(State.A).PermitIf(Trigger.X, State.B, (a, t) => false, guardDescription); 
             sm.Fire(Trigger.X);
         }
 
@@ -264,7 +264,7 @@ namespace Stateless.Tests
 
             State? state = null;
             Trigger? trigger = null;
-            sm.OnUnhandledTrigger((s, t) =>
+            sm.OnUnhandledTrigger((s, t, a) =>
                                       {
                                           state = s;
                                           trigger = t;

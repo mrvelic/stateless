@@ -13,12 +13,12 @@ namespace Stateless
 
             internal TState Destination { get { return _destination; } }
 
-            public TransitioningTriggerBehaviour(TTrigger trigger, TState destination, Func<bool> guard)
+            public TransitioningTriggerBehaviour(TTrigger trigger, TState destination, Func<object[], TTrigger, bool> guard)
                 : this(trigger, destination, guard, string.Empty)
             {
             }
 
-            public TransitioningTriggerBehaviour(TTrigger trigger, TState destination, Func<bool> guard, string description)
+            public TransitioningTriggerBehaviour(TTrigger trigger, TState destination, Func<object[], TTrigger, bool> guard, string description)
                 : base(trigger, guard, description)
             {
                 _destination = destination;

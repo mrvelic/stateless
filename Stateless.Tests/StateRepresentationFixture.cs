@@ -244,7 +244,7 @@ namespace Stateless.Tests
         public void WhenTransitionDoesNotExist_TriggerCannotBeFired()
         {
             var rep = CreateRepresentation(State.B);
-            rep.AddTriggerBehaviour(new StateMachine<State, Trigger>.IgnoredTriggerBehaviour(Trigger.X, () => true));
+            rep.AddTriggerBehaviour(new StateMachine<State, Trigger>.IgnoredTriggerBehaviour(Trigger.X, (a, t) => true));
             Assert.IsTrue(rep.CanHandle(Trigger.X));
         }
 
@@ -252,7 +252,7 @@ namespace Stateless.Tests
         public void WhenTransitionExistsInSupersate_TriggerCanBeFired()
         {
             var rep = CreateRepresentation(State.B);
-            rep.AddTriggerBehaviour(new StateMachine<State, Trigger>.IgnoredTriggerBehaviour(Trigger.X, () => true));
+            rep.AddTriggerBehaviour(new StateMachine<State, Trigger>.IgnoredTriggerBehaviour(Trigger.X, (a, t) => true));
             var sub = CreateRepresentation(State.C);
             sub.Superstate = rep;
             rep.AddSubstate(sub);

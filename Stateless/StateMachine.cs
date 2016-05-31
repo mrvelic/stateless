@@ -15,7 +15,7 @@ namespace Stateless
         readonly IDictionary<TTrigger, TriggerWithParameters> _triggerConfiguration = new Dictionary<TTrigger, TriggerWithParameters>();
         readonly Func<TState> _stateAccessor;
         readonly Action<TState> _stateMutator;
-        Action<TState, TTrigger> _unhandledTriggerAction;
+        Action<TState, TTrigger, object[]> _unhandledTriggerAction;
         event Action<Transition> _onTransitioned;
 
         /// <summary>
@@ -66,12 +66,9 @@ namespace Stateless
         /// <summary>
         /// The currently-permissible trigger values.
         /// </summary>
-        public IEnumerable<TTrigger> PermittedTriggers
+        public IEnumerable<TTrigger> GetPermittedTriggers(params object[] args)
         {
-            get
-            {
-                return CurrentRepresentation.PermittedTriggers;
-            }
+            return CurrentRepresentation.GetPermittedTriggers(args);
         }
 
         StateRepresentation CurrentRepresentation
@@ -187,9 +184,9 @@ namespace Stateless
             var representativeState = GetRepresentation(source);
 
             TriggerBehaviour triggerBehaviour;
-            if (!representativeState.TryFindHandler(trigger, out triggerBehaviour))
+            if (!representativeState.TryFindHandler(trigger, args, out triggerBehaviour))
             {
-                _unhandledTriggerAction(representativeState.UnderlyingState, trigger);
+                _unhandledTriggerAction(representativeState.UnderlyingState, trigger, args);
                 return;
             }
 
@@ -215,7 +212,7 @@ namespace Stateless
         /// is fired.
         /// </summary>
         /// <param name="unhandledTriggerAction">An action to call when an unhandled trigger is fired.</param>
-        public void OnUnhandledTrigger(Action<TState, TTrigger> unhandledTriggerAction)
+        public void OnUnhandledTrigger(Action<TState, TTrigger, object[]> unhandledTriggerAction)
         {
             if (unhandledTriggerAction == null) throw new ArgumentNullException("unhandledTriggerAction");
             _unhandledTriggerAction = unhandledTriggerAction;
@@ -237,10 +234,23 @@ namespace Stateless
         /// in the current state.
         /// </summary>
         /// <param name="trigger">Trigger to test.</param>
+        /// <param name="args">Arguments for trigger</param>
         /// <returns>True if the trigger can be fired, false otherwise.</returns>
-        public bool CanFire(TTrigger trigger)
+        public bool CanFire(TTrigger trigger, params object[] args)
         {
-            return CurrentRepresentation.CanHandle(trigger);
+            return CurrentRepresentation.CanHandle(trigger, args);
+        }
+
+        /// <summary>
+        /// A human-readable representation of the state machine.
+        /// </summary>
+        /// <returns>A description of the current state and permitted triggers.</returns>
+        private string InternalToString(params object[] args)
+        {
+            return string.Format(
+                "StateMachine {{ State = {0}, PermittedTriggers = {{ {1} }}}}",
+                State,
+                string.Join(", ", GetPermittedTriggers(args).Select(t => t.ToString()).ToArray()));
         }
 
         /// <summary>
@@ -249,10 +259,34 @@ namespace Stateless
         /// <returns>A description of the current state and permitted triggers.</returns>
         public override string ToString()
         {
-            return string.Format(
-                "StateMachine {{ State = {0}, PermittedTriggers = {{ {1} }}}}",
-                State,
-                string.Join(", ", PermittedTriggers.Select(t => t.ToString()).ToArray()));
+            return InternalToString();
+        }
+
+        /// <summary>
+        /// A human-readable representation of the state machine.
+        /// </summary>
+        /// <returns>A description of the current state and permitted triggers.</returns>
+        public string ToString<TArg0>(TArg0 arg0)
+        {
+            return InternalToString(arg0);
+        }
+
+        /// <summary>
+        /// A human-readable representation of the state machine.
+        /// </summary>
+        /// <returns>A description of the current state and permitted triggers.</returns>
+        public string ToString<TArg0, TArg1>(TArg0 arg0, TArg1 arg1)
+        {
+            return InternalToString(arg0, arg1);
+        }
+
+        /// <summary>
+        /// A human-readable representation of the state machine.
+        /// </summary>
+        /// <returns>A description of the current state and permitted triggers.</returns>
+        public string ToString<TArg0, TArg1, TArg2>(TArg0 arg0, TArg1 arg1, TArg2 arg2)
+        {
+            return InternalToString(arg0, arg1, arg2);
         }
 
         /// <summary>
@@ -309,13 +343,13 @@ namespace Stateless
             _triggerConfiguration.Add(trigger.Trigger, trigger);
         }
 
-        void DefaultUnhandledTriggerAction(TState state, TTrigger trigger)
+        void DefaultUnhandledTriggerAction(TState state, TTrigger trigger, object[] args)
         {
             var source = state;
             var representativeState = GetRepresentation(source);
 
             TriggerBehaviour triggerBehaviour;
-            if (representativeState.TryFindHandlerWithUnmetGuardCondition(trigger, out triggerBehaviour))
+            if (representativeState.TryFindHandlerWithUnmetGuardCondition(trigger, args, out triggerBehaviour))
             {
                 throw new InvalidOperationException(
                     string.Format(

@@ -6,7 +6,7 @@ namespace Stateless.Tests
     [TestFixture]
     public class DotGraphFixture
     {
-        bool IsTrue() 
+        bool IsTrue(object[] args, Trigger t) 
         {
             return true;
         }
@@ -56,7 +56,7 @@ namespace Stateless.Tests
         [Test]
         public void WhenDiscriminatedByAnonymousGuard()
         {
-            Func<bool> anonymousGuard = () => true;
+            Func<object[], Trigger, bool> anonymousGuard = (a, t) => true;
 
             var expected = "digraph {" + System.Environment.NewLine
                          + " A -> B [label=\"X ["+ anonymousGuard.Method.Name +"]\"];" + System.Environment.NewLine
@@ -73,7 +73,7 @@ namespace Stateless.Tests
         [Test]
         public void WhenDiscriminatedByAnonymousGuardWithDescription()
         {
-            Func<bool> anonymousGuard = () => true;
+            Func<object[], Trigger, bool> anonymousGuard = (a, t) => true;
 
             var expected = "digraph {" + System.Environment.NewLine
                          + " A -> B [label=\"X [description]\"];" + System.Environment.NewLine

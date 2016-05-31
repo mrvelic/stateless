@@ -12,7 +12,7 @@ namespace Stateless.Tests
         [Test]
         public void TransitionsToDestinationState()
         {
-            var transtioning = new StateMachine<State, Trigger>.TransitioningTriggerBehaviour(Trigger.X, State.C, () => true);
+            var transtioning = new StateMachine<State, Trigger>.TransitioningTriggerBehaviour(Trigger.X, State.C, (a, t) => true);
             State destination;
             Assert.IsTrue(transtioning.ResultsInTransitionFrom(State.B, new object[0], out destination));
             Assert.AreEqual(State.C, destination);

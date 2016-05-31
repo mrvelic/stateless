@@ -15,7 +15,7 @@ namespace Stateless
             private readonly StateMachine<TState, TTrigger> _machine;
             readonly StateRepresentation _representation;
             readonly Func<TState, StateRepresentation> _lookup;
-            static readonly Func<bool> NoGuard = () => true;
+            static readonly Func<object[], TTrigger, bool> DefaultNoGuard = (x, y) => true;
 
             internal StateConfiguration(StateMachine<TState, TTrigger> machine, StateRepresentation representation, Func<TState, StateRepresentation> lookup)
             {
@@ -57,7 +57,7 @@ namespace Stateless
             /// trigger to be accepted.</param>
             /// <param name="guardDescription">Guard description</param>
             /// <returns>The reciever.</returns>
-            public StateConfiguration PermitIf(TTrigger trigger, TState destinationState, Func<bool> guard, string guardDescription = null)
+            public StateConfiguration PermitIf(TTrigger trigger, TState destinationState, Func<object[], TTrigger, bool> guard, string guardDescription = null)
             {
                 EnforceNotIdentityTransition(destinationState);
                 return InternalPermitIf(
@@ -95,7 +95,7 @@ namespace Stateless
             /// Applies to the current state only. Will not re-execute superstate actions, or
             /// cause actions to execute transitioning between super- and sub-states.
             /// </remarks>
-            public StateConfiguration PermitReentryIf(TTrigger trigger, Func<bool> guard, string guardDescription = null)
+            public StateConfiguration PermitReentryIf(TTrigger trigger, Func<object[], TTrigger, bool> guard, string guardDescription = null)
             {
                 return InternalPermitIf(
                     trigger,
@@ -110,7 +110,7 @@ namespace Stateless
             /// <returns>The receiver.</returns>
             public StateConfiguration Ignore(TTrigger trigger)
             {
-                return IgnoreIf(trigger, NoGuard);
+                return IgnoreIf(trigger, DefaultNoGuard);
             }
 
             /// <summary>
@@ -122,7 +122,7 @@ namespace Stateless
             /// <param name="guard">Function that must return true in order for the
             /// trigger to be ignored.</param>
             /// <returns>The receiver.</returns>
-            public StateConfiguration IgnoreIf(TTrigger trigger, Func<bool> guard, string guardDescription = null)
+            public StateConfiguration IgnoreIf(TTrigger trigger, Func<object[], TTrigger, bool> guard, string guardDescription = null)
             {
                 Enforce.ArgumentNotNull(guard, nameof(guard));
                 _representation.AddTriggerBehaviour(
@@ -378,7 +378,7 @@ namespace Stateless
             /// <returns>The reciever.</returns>
             public StateConfiguration PermitDynamic(TTrigger trigger, Func<TState> destinationStateSelector)
             {
-                return PermitDynamicIf(trigger, destinationStateSelector, NoGuard);
+                return PermitDynamicIf(trigger, destinationStateSelector, DefaultNoGuard);
             }
 
             /// <summary>
@@ -392,7 +392,7 @@ namespace Stateless
             /// <typeparam name="TArg0">Type of the first trigger argument.</typeparam>
             public StateConfiguration PermitDynamic<TArg0>(TriggerWithParameters<TArg0> trigger, Func<TArg0, TState> destinationStateSelector)
             {
-                return PermitDynamicIf(trigger, destinationStateSelector, NoGuard);
+                return PermitDynamicIf(trigger, destinationStateSelector, (a0, t) => true);
             }
 
             /// <summary>
@@ -407,7 +407,7 @@ namespace Stateless
             /// <typeparam name="TArg1">Type of the second trigger argument.</typeparam>
             public StateConfiguration PermitDynamic<TArg0, TArg1>(TriggerWithParameters<TArg0, TArg1> trigger, Func<TArg0, TArg1, TState> destinationStateSelector)
             {
-                return PermitDynamicIf(trigger, destinationStateSelector, NoGuard);
+                return PermitDynamicIf(trigger, destinationStateSelector, (a0, a1, t) => true);
             }
 
             /// <summary>
@@ -423,7 +423,7 @@ namespace Stateless
             /// <typeparam name="TArg2">Type of the third trigger argument.</typeparam>
             public StateConfiguration PermitDynamic<TArg0, TArg1, TArg2>(TriggerWithParameters<TArg0, TArg1, TArg2> trigger, Func<TArg0, TArg1, TArg2, TState> destinationStateSelector)
             {
-                return PermitDynamicIf(trigger, destinationStateSelector, NoGuard);
+                return PermitDynamicIf(trigger, destinationStateSelector, (a0, a1, a2, t) => true);
             }
 
 
@@ -438,7 +438,7 @@ namespace Stateless
             /// trigger to be accepted.</param>
             /// <param name="guardDescription">Guard description</param>
             /// <returns>The reciever.</returns>
-            public StateConfiguration PermitDynamicIf(TTrigger trigger, Func<TState> destinationStateSelector, Func<bool> guard, string guardDescription = null)
+            public StateConfiguration PermitDynamicIf(TTrigger trigger, Func<TState> destinationStateSelector, Func<object[], TTrigger, bool> guard, string guardDescription = null)
             {
                 Enforce.ArgumentNotNull(destinationStateSelector, nameof(destinationStateSelector));
                 return InternalPermitDynamicIf(
@@ -460,7 +460,7 @@ namespace Stateless
             /// <param name="guardDescription">Guard description</param>
             /// <returns>The reciever.</returns>
             /// <typeparam name="TArg0">Type of the first trigger argument.</typeparam>
-            public StateConfiguration PermitDynamicIf<TArg0>(TriggerWithParameters<TArg0> trigger, Func<TArg0, TState> destinationStateSelector, Func<bool> guard, string guardDescription = null)
+            public StateConfiguration PermitDynamicIf<TArg0>(TriggerWithParameters<TArg0> trigger, Func<TArg0, TState> destinationStateSelector, Func<TArg0, TTrigger, bool> guard, string guardDescription = null)
             {
                 Enforce.ArgumentNotNull(trigger, nameof(trigger));
                 Enforce.ArgumentNotNull(destinationStateSelector, nameof(destinationStateSelector));
@@ -468,7 +468,8 @@ namespace Stateless
                     trigger.Trigger,
                     args => destinationStateSelector(
                         ParameterConversion.Unpack<TArg0>(args, 0)),
-                    guard,
+                    (args, t) => guard(
+                        ParameterConversion.Unpack<TArg0>(args, 0), t),
                     guardDescription != null ? guardDescription : guard?.Method.Name);
             }
 
@@ -485,7 +486,7 @@ namespace Stateless
             /// <returns>The reciever.</returns>
             /// <typeparam name="TArg0">Type of the first trigger argument.</typeparam>
             /// <typeparam name="TArg1">Type of the second trigger argument.</typeparam>
-            public StateConfiguration PermitDynamicIf<TArg0, TArg1>(TriggerWithParameters<TArg0, TArg1> trigger, Func<TArg0, TArg1, TState> destinationStateSelector, Func<bool> guard, string guardDescription = null)
+            public StateConfiguration PermitDynamicIf<TArg0, TArg1>(TriggerWithParameters<TArg0, TArg1> trigger, Func<TArg0, TArg1, TState> destinationStateSelector, Func<TArg0, TArg1, TTrigger, bool> guard, string guardDescription = null)
             {
                 Enforce.ArgumentNotNull(trigger, nameof(trigger));
                 Enforce.ArgumentNotNull(destinationStateSelector, nameof(destinationStateSelector));
@@ -494,7 +495,10 @@ namespace Stateless
                     args => destinationStateSelector(
                         ParameterConversion.Unpack<TArg0>(args, 0),
                         ParameterConversion.Unpack<TArg1>(args, 1)),
-                    guard,
+                    (args, t) => guard(
+                        ParameterConversion.Unpack<TArg0>(args, 0),
+                        ParameterConversion.Unpack<TArg1>(args, 1),
+                        t),
                     guardDescription != null ? guardDescription : guard?.Method.Name);
             }
 
@@ -512,7 +516,7 @@ namespace Stateless
             /// <typeparam name="TArg0">Type of the first trigger argument.</typeparam>
             /// <typeparam name="TArg1">Type of the second trigger argument.</typeparam>
             /// <typeparam name="TArg2">Type of the third trigger argument.</typeparam>
-            public StateConfiguration PermitDynamicIf<TArg0, TArg1, TArg2>(TriggerWithParameters<TArg0, TArg1, TArg2> trigger, Func<TArg0, TArg1, TArg2, TState> destinationStateSelector, Func<bool> guard, string guardDescription = null)
+            public StateConfiguration PermitDynamicIf<TArg0, TArg1, TArg2>(TriggerWithParameters<TArg0, TArg1, TArg2> trigger, Func<TArg0, TArg1, TArg2, TState> destinationStateSelector, Func<TArg0, TArg1, TArg2, TTrigger, bool> guard, string guardDescription = null)
             {
                 Enforce.ArgumentNotNull(trigger, nameof(trigger));
                 Enforce.ArgumentNotNull(destinationStateSelector, nameof(destinationStateSelector));
@@ -522,7 +526,11 @@ namespace Stateless
                         ParameterConversion.Unpack<TArg0>(args, 0),
                         ParameterConversion.Unpack<TArg1>(args, 1),
                         ParameterConversion.Unpack<TArg2>(args, 2)),
-                    guard,
+                    (args, t) => guard(
+                        ParameterConversion.Unpack<TArg0>(args, 0),
+                        ParameterConversion.Unpack<TArg1>(args, 1),
+                        ParameterConversion.Unpack<TArg2>(args, 2), 
+                        t),
                     guardDescription != null ? guardDescription : guard?.Method.Name);
             }
 
@@ -536,10 +544,10 @@ namespace Stateless
 
             StateConfiguration InternalPermit(TTrigger trigger, TState destinationState, string guardDescription)
             {
-                return InternalPermitIf(trigger, destinationState, () => true, guardDescription);
+                return InternalPermitIf(trigger, destinationState, DefaultNoGuard, guardDescription);
             }
 
-            StateConfiguration InternalPermitIf(TTrigger trigger, TState destinationState, Func<bool> guard, string guardDescription)
+            StateConfiguration InternalPermitIf(TTrigger trigger, TState destinationState, Func<object[], TTrigger, bool> guard, string guardDescription)
             {
                 Enforce.ArgumentNotNull(guard, nameof(guard));
                 _representation.AddTriggerBehaviour(new TransitioningTriggerBehaviour(trigger, destinationState, guard, guardDescription));
@@ -548,10 +556,10 @@ namespace Stateless
 
             StateConfiguration InternalPermitDynamic(TTrigger trigger, Func<object[], TState> destinationStateSelector, string guardDescription)
             {
-                return InternalPermitDynamicIf(trigger, destinationStateSelector, NoGuard, guardDescription);
+                return InternalPermitDynamicIf(trigger, destinationStateSelector, DefaultNoGuard, guardDescription);
             }
 
-            StateConfiguration InternalPermitDynamicIf(TTrigger trigger, Func<object[], TState> destinationStateSelector, Func<bool> guard, string guardDescription)
+            StateConfiguration InternalPermitDynamicIf(TTrigger trigger, Func<object[], TState> destinationStateSelector, Func<object[], TTrigger, bool> guard, string guardDescription)
             {
                 Enforce.ArgumentNotNull(destinationStateSelector, nameof(destinationStateSelector));
                 Enforce.ArgumentNotNull(guard, nameof(guard));
